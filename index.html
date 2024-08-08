@@ -69,6 +69,7 @@
         let balls = [];
         let animationId;
         let isPaused = false;
+        let lastTime = 0;
 
         function createBall() {
             const ball = document.createElement('div');
@@ -80,42 +81,44 @@
             const containerRadius = container.clientWidth / 2;
 
             const angle = Math.random() * 2 * Math.PI;
-            const distanceFromCenter = Math.random() * (containerRadius - radius);
+            const distanceFromCenter = Math.random() * (containerRadius - radius - 1);
+
+            const speed = 2 + Math.random() * 2;
+            const direction = Math.random() * 2 * Math.PI;
 
             return {
                 element: ball,
                 x: containerRadius + distanceFromCenter * Math.cos(angle),
                 y: containerRadius + distanceFromCenter * Math.sin(angle),
-                dx: (Math.random() - 0.5) * 4,
-                dy: (Math.random() - 0.5) * 4,
+                dx: Math.cos(direction) * speed,
+                dy: Math.sin(direction) * speed,
                 radius: radius,
                 containerRadius: containerRadius
             };
         }
 
-        function updateBalls() {
+        function updateBalls(deltaTime) {
             const speed = parseFloat(speedInput.value);
             balls.forEach(ball => {
-                ball.x += ball.dx * speed;
-                ball.y += ball.dy * speed;
+                ball.x += ball.dx * speed * deltaTime;
+                ball.y += ball.dy * speed * deltaTime;
 
-                const distanceFromCenter = Math.sqrt(
-                    Math.pow(ball.x - ball.containerRadius, 2) + 
-                    Math.pow(ball.y - ball.containerRadius, 2)
-                );
+                const dx = ball.x - ball.containerRadius;
+                const dy = ball.y - ball.containerRadius;
+                const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
 
                 if (distanceFromCenter + ball.radius > ball.containerRadius) {
-                    const normalAngle = Math.atan2(ball.y - ball.containerRadius, ball.x - ball.containerRadius);
-                    const incomingAngle = Math.atan2(ball.dy, ball.dx);
-                    const reflectionAngle = 2 * normalAngle - incomingAngle;
+                    const normalX = dx / distanceFromCenter;
+                    const normalY = dy / distanceFromCenter;
 
-                    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
-                    ball.dx = Math.cos(reflectionAngle) * speed;
-                    ball.dy = Math.sin(reflectionAngle) * speed;
+                    const dotProduct = ball.dx * normalX + ball.dy * normalY;
+
+                    ball.dx -= 2 * dotProduct * normalX;
+                    ball.dy -= 2 * dotProduct * normalY;
 
                     const overlap = (distanceFromCenter + ball.radius) - ball.containerRadius;
-                    ball.x -= Math.cos(normalAngle) * overlap;
-                    ball.y -= Math.sin(normalAngle) * overlap;
+                    ball.x -= normalX * overlap;
+                    ball.y -= normalY * overlap;
                 }
 
                 ball.element.style.left = (ball.x - ball.radius) + 'px';
@@ -123,9 +126,11 @@
             });
         }
 
-        function animate() {
+        function animate(currentTime) {
             if (!isPaused) {
-                updateBalls();
+                const deltaTime = (currentTime - lastTime) / 16.67; // 60 FPSを基準とした経過時間
+                updateBalls(deltaTime);
+                lastTime = currentTime;
             }
             animationId = requestAnimationFrame(animate);
         }
@@ -138,6 +143,15 @@
             while (balls.length < count) {
                 balls.push(createBall());
             }
+        }
+
+        function resizeContainer() {
+            const containerSize = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.8, 500);
+            container.style.width = containerSize + 'px';
+            container.style.height = containerSize + 'px';
+            balls.forEach(ball => {
+                ball.containerRadius = containerSize / 2;
+            });
         }
 
         ballColorInput.addEventListener('input', () => {
@@ -155,8 +169,11 @@
             toggleAnimationBtn.textContent = isPaused ? '再開' : '一時停止';
         });
 
+        window.addEventListener('resize', resizeContainer);
+
+        resizeContainer();
         updateBallCount();
-        animate();
+        animate(0);
 
         window.addEventListener('error', (event) => {
             console.error('エラーが発生しました:', event.error);
