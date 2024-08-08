@@ -1,15 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Go Game</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>インタラクティブボールアニメーション</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            width: 80vmin;
+            height: 80vmin;
+            max-width: 500px;
+            max-height: 500px;
+            border-radius: 50%;
+            border: 2px solid #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ball {
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .controls > * {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
-    <h1>Go Game</h1>
-    <div id="board"></div>
-    <script src="https://cdn.jsdelivr.net/npm/wgo@2.3.0/wgo.min.js"></script>
-    <script src="script.js"></script>
+    <div class="container" id="container"></div>
+    <div class="controls">
+        <label for="ballColor">ボールの色: <input type="color" id="ballColor" value="#ff0000"></label>
+        <label for="bgColor">背景色: <input type="color" id="bgColor" value="#f0f0f0"></label>
+        <label for="speed">速度: <input type="range" id="speed" min="1" max="10" value="5"></label>
+        <label for="ballCount">ボールの数: <input type="number" id="ballCount" min="1" max="10" value="1"></label>
+        <button id="toggleAnimation" aria-label="アニメーションを一時停止/再開">一時停止/再開</button>
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        const ballColorInput = document.getElementById('ballColor');
+        const bgColorInput = document.getElementById('bgColor');
+        const speedInput = document.getElementById('speed');
+        const ballCountInput = document.getElementById('ballCount');
+        const toggleAnimationBtn = document.getElementById('toggleAnimation');
+
+        let balls = [];
+        let animationId;
+        let isPaused = false;
+
+        function createBall() {
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+            ball.style.backgroundColor = ballColorInput.value;
+            container.appendChild(ball);
+
+            return {
+                element: ball,
+                x: Math.random() * (container.clientWidth - ball.clientWidth),
+                y: Math.random() * (container.clientHeight - ball.clientHeight),
+                dx: (Math.random() - 0.5) * 4,
+                dy: (Math.random() - 0.5) * 4
+            };
+        }
+
+        function updateBalls() {
+            const speed = parseFloat(speedInput.value);
+            balls.forEach(ball => {
+                ball.x += ball.dx * speed;
+                ball.y += ball.dy * speed;
+
+                if (ball.x + ball.element.clientWidth > container.clientWidth || ball.x < 0) {
+                    ball.dx = -ball.dx;
+                }
+                if (ball.y + ball.element.clientHeight > container.clientHeight || ball.y < 0) {
+                    ball.dy = -ball.dy;
+                }
+
+                ball.element.style.left = ball.x + 'px';
+                ball.element.style.top = ball.y + 'px';
+            });
+        }
+
+        function animate() {
+            if (!isPaused) {
+                updateBalls();
+            }
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function updateBallCount() {
+            const count = parseInt(ballCountInput.value);
+            while (balls.length > count) {
+                container.removeChild(balls.pop().element);
+            }
+            while (balls.length < count) {
+                balls.push(createBall());
+            }
+        }
+
+        ballColorInput.addEventListener('input', () => {
+            balls.forEach(ball => ball.element.style.backgroundColor = ballColorInput.value);
+        });
+
+        bgColorInput.addEventListener('input', () => {
+            document.body.style.backgroundColor = bgColorInput.value;
+        });
+
+        ballCountInput.addEventListener('input', updateBallCount);
+
+        toggleAnimationBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            toggleAnimationBtn.textContent = isPaused ? '再開' : '一時停止';
+        });
+
+        updateBallCount();
+        animate();
+
+        // エラー処理
+        window.addEventListener('error', (event) => {
+            console.error('エラーが発生しました:', event.error);
+            // ここでユーザーにエラーを通知するなどの処理を追加できます
+        });
+    </script>
 </body>
 </html>
