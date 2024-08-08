@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>インタラクティブボールアニメーション</title>
+    <title>円形衝突判定ボールアニメーション</title>
     <style>
         body, html {
             margin: 0;
@@ -76,12 +76,20 @@
             ball.style.backgroundColor = ballColorInput.value;
             container.appendChild(ball);
 
+            const radius = ball.clientWidth / 2;
+            const containerRadius = container.clientWidth / 2;
+
+            const angle = Math.random() * 2 * Math.PI;
+            const distanceFromCenter = Math.random() * (containerRadius - radius);
+
             return {
                 element: ball,
-                x: Math.random() * (container.clientWidth - ball.clientWidth),
-                y: Math.random() * (container.clientHeight - ball.clientHeight),
+                x: containerRadius + distanceFromCenter * Math.cos(angle),
+                y: containerRadius + distanceFromCenter * Math.sin(angle),
                 dx: (Math.random() - 0.5) * 4,
-                dy: (Math.random() - 0.5) * 4
+                dy: (Math.random() - 0.5) * 4,
+                radius: radius,
+                containerRadius: containerRadius
             };
         }
 
@@ -91,15 +99,27 @@
                 ball.x += ball.dx * speed;
                 ball.y += ball.dy * speed;
 
-                if (ball.x + ball.element.clientWidth > container.clientWidth || ball.x < 0) {
-                    ball.dx = -ball.dx;
-                }
-                if (ball.y + ball.element.clientHeight > container.clientHeight || ball.y < 0) {
-                    ball.dy = -ball.dy;
+                const distanceFromCenter = Math.sqrt(
+                    Math.pow(ball.x - ball.containerRadius, 2) + 
+                    Math.pow(ball.y - ball.containerRadius, 2)
+                );
+
+                if (distanceFromCenter + ball.radius > ball.containerRadius) {
+                    const normalAngle = Math.atan2(ball.y - ball.containerRadius, ball.x - ball.containerRadius);
+                    const incomingAngle = Math.atan2(ball.dy, ball.dx);
+                    const reflectionAngle = 2 * normalAngle - incomingAngle;
+
+                    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+                    ball.dx = Math.cos(reflectionAngle) * speed;
+                    ball.dy = Math.sin(reflectionAngle) * speed;
+
+                    const overlap = (distanceFromCenter + ball.radius) - ball.containerRadius;
+                    ball.x -= Math.cos(normalAngle) * overlap;
+                    ball.y -= Math.sin(normalAngle) * overlap;
                 }
 
-                ball.element.style.left = ball.x + 'px';
-                ball.element.style.top = ball.y + 'px';
+                ball.element.style.left = (ball.x - ball.radius) + 'px';
+                ball.element.style.top = (ball.y - ball.radius) + 'px';
             });
         }
 
@@ -138,10 +158,8 @@
         updateBallCount();
         animate();
 
-        // エラー処理
         window.addEventListener('error', (event) => {
             console.error('エラーが発生しました:', event.error);
-            // ここでユーザーにエラーを通知するなどの処理を追加できます
         });
     </script>
 </body>
