@@ -12,34 +12,28 @@
             align-items: center;
             background-color: #f0f0f0;
         }
+
         canvas {
             border: 1px solid #000;
-            background-color: #000;
+            background-color: #fff;
         }
     </style>
 </head>
 <body>
     <h1>Three-Body Problem Simulation</h1>
-    <canvas id="simulationCanvas"></canvas>
+    <canvas id="simulationCanvas" width="800" height="600"></canvas>
+
     <script>
         const canvas = document.getElementById('simulationCanvas');
         const ctx = canvas.getContext('2d');
 
-        canvas.width = 800;
-        canvas.height = 600;
-
-        const G = 6.67430e-11;
-        const SCALE = 1e-8;
-        const DT = 1000;
-
         class Body {
-            constructor(x, y, mass, vx, vy, color) {
+            constructor(x, y, mass, vx, vy) {
                 this.x = x;
                 this.y = y;
                 this.mass = mass;
                 this.vx = vx;
                 this.vy = vy;
-                this.color = color;
             }
 
             update(bodies, dt) {
@@ -49,7 +43,7 @@
                         let dx = body.x - this.x;
                         let dy = body.y - this.y;
                         let distSq = dx * dx + dy * dy;
-                        let f = (G * this.mass * body.mass) / distSq;
+                        let f = (6.67430e-3 * this.mass * body.mass) / distSq;
                         let dist = Math.sqrt(distSq);
                         fx += f * dx / dist;
                         fy += f * dy / dist;
@@ -62,24 +56,22 @@
             }
 
             draw() {
-                ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(this.x * SCALE + canvas.width / 2, this.y * SCALE + canvas.height / 2, Math.sqrt(this.mass) * 1e-6, 0, 2 * Math.PI);
+                ctx.arc(this.x, this.y, Math.sqrt(this.mass) * 0.005, 0, 2 * Math.PI);
                 ctx.fill();
             }
         }
 
         const bodies = [
-            new Body(0, 0, 1e30, 0, 0, '#FF0000'),
-            new Body(1e11, 0, 1e30, 0, 1e4, '#00FF00'),
-            new Body(-1e11, 0, 1e30, 0, -1e4, '#0000FF')
+            new Body(400, 300, 1e10, 0, 0),
+            new Body(400, 400, 1e10, 1, 0),
+            new Body(500, 300, 1e10, 0, -1)
         ];
 
         function simulate() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let body of bodies) {
-                body.update(bodies, DT);
+                body.update(bodies, 0.001);
                 body.draw();
             }
             requestAnimationFrame(simulate);
