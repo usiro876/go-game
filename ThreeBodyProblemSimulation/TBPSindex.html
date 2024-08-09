@@ -39,6 +39,11 @@
         .dark-mode #simulationCanvas {
             border-color: #fff;
         }
+        .body-controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -56,6 +61,29 @@
         <div class="control-group">
             <label for="dtSlider">時間刻み: <span id="dtValue">3600</span> 秒</label>
             <input type="range" id="dtSlider" min="1800" max="7200" step="100" value="3600">
+        </div>
+    </div>
+    <div class="body-controls">
+        <div class="control-group">
+            <h3>天体1 (赤)</h3>
+            <label for="body1X">X座標: <span id="body1XValue">0</span> AU</label>
+            <input type="range" id="body1X" min="-2" max="2" step="0.1" value="0">
+            <label for="body1Y">Y座標: <span id="body1YValue">0</span> AU</label>
+            <input type="range" id="body1Y" min="-2" max="2" step="0.1" value="0">
+        </div>
+        <div class="control-group">
+            <h3>天体2 (青)</h3>
+            <label for="body2X">X座標: <span id="body2XValue">1</span> AU</label>
+            <input type="range" id="body2X" min="-2" max="2" step="0.1" value="1">
+            <label for="body2Y">Y座標: <span id="body2YValue">0</span> AU</label>
+            <input type="range" id="body2Y" min="-2" max="2" step="0.1" value="0">
+        </div>
+        <div class="control-group">
+            <h3>天体3 (緑)</h3>
+            <label for="body3X">X座標: <span id="body3XValue">-0.5</span> AU</label>
+            <input type="range" id="body3X" min="-2" max="2" step="0.1" value="-0.5">
+            <label for="body3Y">Y座標: <span id="body3YValue">0.866</span> AU</label>
+            <input type="range" id="body3Y" min="-2" max="2" step="0.1" value="0.866">
         </div>
     </div>
     <div class="controls">
@@ -138,10 +166,17 @@
         function initBodies() {
             const mass = parseFloat(document.getElementById('massSlider').value);
             const velocity = parseFloat(document.getElementById('velocitySlider').value);
+            const body1X = parseFloat(document.getElementById('body1X').value);
+            const body1Y = parseFloat(document.getElementById('body1Y').value);
+            const body2X = parseFloat(document.getElementById('body2X').value);
+            const body2Y = parseFloat(document.getElementById('body2Y').value);
+            const body3X = parseFloat(document.getElementById('body3X').value);
+            const body3Y = parseFloat(document.getElementById('body3Y').value);
+
             bodies = [
-                new Body(0, 0, mass, 0, velocity, 'red'),
-                new Body(1, 0, mass, -velocity * Math.cos(Math.PI/6), velocity * Math.sin(Math.PI/6), 'blue'),
-                new Body(-0.5, 0.866, mass, velocity * Math.cos(Math.PI/6), -velocity * Math.sin(Math.PI/6), 'green')
+                new Body(body1X, body1Y, mass, 0, velocity, 'red'),
+                new Body(body2X, body2Y, mass, -velocity * Math.cos(Math.PI/6), velocity * Math.sin(Math.PI/6), 'blue'),
+                new Body(body3X, body3Y, mass, velocity * Math.cos(Math.PI/6), -velocity * Math.sin(Math.PI/6), 'green')
             ];
         }
 
@@ -217,6 +252,13 @@
         });
         document.getElementById('dtSlider').addEventListener('input', function() {
             document.getElementById('dtValue').textContent = this.value;
+        });
+
+        // 新しく追加した初期位置のスライダーのイベントリスナー
+        ['body1X', 'body1Y', 'body2X', 'body2Y', 'body3X', 'body3Y'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                document.getElementById(id + 'Value').textContent = this.value;
+            });
         });
 
         initBodies();
