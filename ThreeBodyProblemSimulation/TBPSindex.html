@@ -46,16 +46,16 @@
     <canvas id="simulationCanvas" width="800" height="600"></canvas>
     <div class="controls">
         <div class="control-group">
-            <label for="massSlider">質量: <span id="massValue">1e24</span></label>
-            <input type="range" id="massSlider" min="1e23" max="1e25" step="1e23" value="1e24">
+            <label for="massSlider">質量: <span id="massValue">5e30</span> kg</label>
+            <input type="range" id="massSlider" min="1e30" max="1e31" step="1e30" value="5e30">
         </div>
         <div class="control-group">
-            <label for="velocitySlider">初速: <span id="velocityValue">5</span></label>
-            <input type="range" id="velocitySlider" min="0" max="10" step="0.1" value="5">
+            <label for="velocitySlider">初速: <span id="velocityValue">30</span> km/s</label>
+            <input type="range" id="velocitySlider" min="0" max="100" step="1" value="30">
         </div>
         <div class="control-group">
-            <label for="dtSlider">時間刻み: <span id="dtValue">3600</span></label>
-            <input type="range" id="dtSlider" min="1800" max="7200" step="1800" value="3600">
+            <label for="dtSlider">時間刻み: <span id="dtValue">86400</span> 秒</label>
+            <input type="range" id="dtSlider" min="3600" max="604800" step="3600" value="86400">
         </div>
     </div>
     <div class="controls">
@@ -75,14 +75,15 @@
 
         const G = 6.67430e-11; // 重力定数
         const SCALE = 1e-9; // スケーリング係数
+        const AU = 1.496e11; // 1天文単位（メートル）
 
         class Body {
             constructor(x, y, mass, vx, vy, color) {
-                this.x = x;
-                this.y = y;
+                this.x = x * AU;
+                this.y = y * AU;
                 this.mass = mass;
-                this.vx = vx;
-                this.vy = vy;
+                this.vx = vx * 1000; // km/s to m/s
+                this.vy = vy * 1000; // km/s to m/s
                 this.color = color;
                 this.trail = [];
             }
@@ -91,8 +92,8 @@
                 let fx = 0, fy = 0;
                 for (let body of bodies) {
                     if (body !== this) {
-                        let dx = (body.x - this.x) / SCALE;
-                        let dy = (body.y - this.y) / SCALE;
+                        let dx = body.x - this.x;
+                        let dy = body.y - this.y;
                         let distSq = dx * dx + dy * dy;
                         let dist = Math.sqrt(distSq);
                         let f = (G * this.mass * body.mass) / distSq;
@@ -102,11 +103,11 @@
                 }
                 this.vx += fx / this.mass * dt;
                 this.vy += fy / this.mass * dt;
-                this.x += this.vx * dt * SCALE;
-                this.y += this.vy * dt * SCALE;
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
 
                 if (showTrail) {
-                    this.trail.push({x: this.x, y: this.y});
+                    this.trail.push({x: this.x * SCALE, y: this.y * SCALE});
                     if (this.trail.length > 1000) {
                         this.trail.shift();
                     }
@@ -114,9 +115,11 @@
             }
 
             draw() {
+                let scaledX = this.x * SCALE;
+                let scaledY = this.y * SCALE;
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, Math.sqrt(this.mass) * 1e-11, 0, 2 * Math.PI);
+                ctx.arc(scaledX, scaledY, Math.sqrt(this.mass) * 1e-13, 0, 2 * Math.PI);
                 ctx.fill();
 
                 if (showTrail) {
@@ -136,9 +139,9 @@
             const mass = parseFloat(document.getElementById('massSlider').value);
             const velocity = parseFloat(document.getElementById('velocitySlider').value);
             bodies = [
-                new Body(400, 300, mass, 0, velocity, 'red'),
-                new Body(400, 400, mass, velocity, 0, 'blue'),
-                new Body(500, 300, mass, 0, -velocity, 'green')
+                new Body(0, 0, mass, 0, velocity, 'red'),
+                new Body(1, 0, mass, -velocity * Math.cos(Math.PI/6), velocity * Math.sin(Math.PI/6), 'blue'),
+                new Body(-0.5, 0.866, mass, velocity * Math.cos(Math.PI/6), -velocity * Math.sin(Math.PI/6), 'green')
             ];
         }
 
@@ -150,8 +153,8 @@
                 kineticEnergy += 0.5 * body1.mass * (body1.vx * body1.vx + body1.vy * body1.vy);
                 for (let j = i + 1; j < bodies.length; j++) {
                     const body2 = bodies[j];
-                    const dx = (body2.x - body1.x) / SCALE;
-                    const dy = (body2.y - body1.y) / SCALE;
+                    const dx = body2.x - body1.x;
+                    const dy = body2.y - body1.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     potentialEnergy -= G * body1.mass * body2.mass / distance;
                 }
