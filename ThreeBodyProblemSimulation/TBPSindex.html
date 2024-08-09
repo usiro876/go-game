@@ -27,6 +27,8 @@
         const canvas = document.getElementById('simulationCanvas');
         const ctx = canvas.getContext('2d');
 
+class Body {
+    constructor(x, y, mass, vx, vy, color) {
         class Body {
             constructor(x, y, mass, vx, vy) {
                 this.x = x;
@@ -35,6 +37,23 @@
                 this.vx = vx;
                 this.vy = vy;
             }
+        this.color = color;
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, Math.sqrt(this.mass) * 0.1, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+}
+
+const bodies = [
+    new Body(200, 300, 1e10, 0, 5, 'red'),
+    new Body(400, 300, 1e10, 0, -5, 'blue'),
+    new Body(300, 500, 1e10, 5, 0, 'green')
+];
+
 
             update(bodies, dt) {
                 let fx = 0, fy = 0;
