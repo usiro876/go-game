@@ -3,57 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three-Body Problem Simulation</title>
+    <title>三体問題シミュレーション</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f0f0f0;
+            transition: background-color 0.3s, color 0.3s;
         }
-
-        canvas {
+        #simulationCanvas {
             border: 1px solid #000;
-            background-color: #fff;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        button {
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .dark-mode {
+            background-color: #333;
+            color: #fff;
+        }
+        .dark-mode #simulationCanvas {
+            border-color: #fff;
         }
     </style>
 </head>
 <body>
-    <h1>Three-Body Problem Simulation</h1>
-    <canvas id="simulationCanvas" width="1920" height="1080"></canvas>
+    <h1>三体問題シミュレーション</h1>
+    <canvas id="simulationCanvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <div class="control-group">
+            <label for="massSlider">質量: <span id="massValue">1e10</span></label>
+            <input type="range" id="massSlider" min="1e9" max="1e11" step="1e9" value="1e10">
+        </div>
+        <div class="control-group">
+            <label for="velocitySlider">初速: <span id="velocityValue">5</span></label>
+            <input type="range" id="velocitySlider" min="0" max="10" step="0.1" value="5">
+        </div>
+        <div class="control-group">
+            <label for="dtSlider">時間刻み: <span id="dtValue">0.001</span></label>
+            <input type="range" id="dtSlider" min="0.0001" max="0.01" step="0.0001" value="0.001">
+        </div>
+    </div>
+    <div class="controls">
+        <button id="resetBtn">リセット</button>
+        <button id="pauseResumeBtn">一時停止/再開</button>
+        <button id="toggleTrailBtn">軌跡表示切替</button>
+        <button id="toggleThemeBtn">テーマ切替</button>
+    </div>
+    <div id="energyInfo"></div>
 
     <script>
         const canvas = document.getElementById('simulationCanvas');
         const ctx = canvas.getContext('2d');
+        let isPaused = false;
+        let showTrail = false;
+        let isDarkMode = false;
 
-class Body {
-    constructor(x, y, mass, vx, vy, color) {
         class Body {
-            constructor(x, y, mass, vx, vy) {
+            constructor(x, y, mass, vx, vy, color) {
                 this.x = x;
                 this.y = y;
                 this.mass = mass;
                 this.vx = vx;
                 this.vy = vy;
+                this.color = color;
+                this.trail = [];
             }
-        this.color = color;
-    }
-
-    draw() {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, Math.sqrt(this.mass) * 0.1, 0, 2 * Math.PI);
-        ctx.fill();
-    }
-}
-
-const bodies = [
-    new Body(200, 300, 1e10, 0, 5, 'red'),
-    new Body(400, 300, 1e10, 0, -5, 'blue'),
-    new Body(300, 500, 1e10, 5, 0, 'green')
-];
-
 
             update(bodies, dt) {
                 let fx = 0, fy = 0;
@@ -62,7 +91,7 @@ const bodies = [
                         let dx = body.x - this.x;
                         let dy = body.y - this.y;
                         let distSq = dx * dx + dy * dy;
-                        let f = (6.67430e-3 * this.mass * body.mass) / distSq;
+                        let f = (6.67430e-11 * this.mass * body.mass) / distSq;
                         let dist = Math.sqrt(distSq);
                         fx += f * dx / dist;
                         fy += f * dy / dist;
@@ -72,30 +101,119 @@ const bodies = [
                 this.vy += fy / this.mass * dt;
                 this.x += this.vx * dt;
                 this.y += this.vy * dt;
+
+                if (showTrail) {
+                    this.trail.push({x: this.x, y: this.y});
+                    if (this.trail.length > 1000) {
+                        this.trail.shift();
+                    }
+                }
             }
 
             draw() {
+                ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, Math.sqrt(this.mass) * 0.0001, 0, 2 * Math.PI);
                 ctx.fill();
+
+                if (showTrail) {
+                    ctx.strokeStyle = this.color;
+                    ctx.beginPath();
+                    for (let point of this.trail) {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                    ctx.stroke();
+                }
             }
         }
 
-        const bodies = [
-            new Body(400, 300, 1e10, 0, 0),
-            new Body(400, 400, 1e10, 1, 0),
-            new Body(500, 300, 1e10, 0, -1)
-        ];
+        let bodies = [];
+
+        function initBodies() {
+            const mass = parseFloat(document.getElementById('massSlider').value);
+            const velocity = parseFloat(document.getElementById('velocitySlider').value);
+            bodies = [
+                new Body(400, 300, mass, 0, velocity, 'red'),
+                new Body(400, 400, mass, velocity, 0, 'blue'),
+                new Body(500, 300, mass, 0, -velocity, 'green')
+            ];
+        }
+
+        function calculateEnergy() {
+            let kineticEnergy = 0;
+            let potentialEnergy = 0;
+            for (let i = 0; i < bodies.length; i++) {
+                const body1 = bodies[i];
+                kineticEnergy += 0.5 * body1.mass * (body1.vx * body1.vx + body1.vy * body1.vy);
+                for (let j = i + 1; j < bodies.length; j++) {
+                    const body2 = bodies[j];
+                    const dx = body2.x - body1.x;
+                    const dy = body2.y - body1.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    potentialEnergy -= 6.67430e-11 * body1.mass * body2.mass / distance;
+                }
+            }
+            return kineticEnergy + potentialEnergy;
+        }
 
         function simulate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let body of bodies) {
-                body.update(bodies, 0.001);
-                body.draw();
+            if (!isPaused) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const dt = parseFloat(document.getElementById('dtSlider').value);
+                for (let body of bodies) {
+                    body.update(bodies, dt);
+                    body.draw();
+                }
+                const totalEnergy = calculateEnergy();
+                document.getElementById('energyInfo').textContent = `全エネルギー: ${totalEnergy.toExponential(4)} J`;
             }
             requestAnimationFrame(simulate);
         }
 
+        function resetSimulation() {
+            initBodies();
+            for (let body of bodies) {
+                body.trail = [];
+            }
+        }
+
+        function togglePauseResume() {
+            isPaused = !isPaused;
+            document.getElementById('pauseResumeBtn').textContent = isPaused ? '再開' : '一時停止';
+        }
+
+        function toggleTrail() {
+            showTrail = !showTrail;
+            document.getElementById('toggleTrailBtn').textContent = showTrail ? '軌跡を隠す' : '軌跡を表示';
+            if (!showTrail) {
+                for (let body of bodies) {
+                    body.trail = [];
+                }
+            }
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            document.getElementById('toggleThemeBtn').textContent = isDarkMode ? 'ライトモード' : 'ダークモード';
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+        document.getElementById('pauseResumeBtn').addEventListener('click', togglePauseResume);
+        document.getElementById('toggleTrailBtn').addEventListener('click', toggleTrail);
+        document.getElementById('toggleThemeBtn').addEventListener('click', toggleTheme);
+
+        document.getElementById('massSlider').addEventListener('input', function() {
+            document.getElementById('massValue').textContent = this.value;
+        });
+        document.getElementById('velocitySlider').addEventListener('input', function() {
+            document.getElementById('velocityValue').textContent = this.value;
+        });
+        document.getElementById('dtSlider').addEventListener('input', function() {
+            document.getElementById('dtValue').textContent = this.value;
+        });
+
+        initBodies();
         simulate();
     </script>
 </body>
