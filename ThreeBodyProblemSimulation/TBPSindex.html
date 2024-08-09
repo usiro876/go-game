@@ -114,6 +114,7 @@
                 this.vy = vy * 1000; // km/s to m/s
                 this.color = color;
                 this.trail = [];
+                this.radius = 1e9; // 衝突判定用の半径（1,000 km）
             }
 
             update(bodies, dt) {
@@ -124,9 +125,15 @@
                         let dy = body.y - this.y;
                         let distSq = dx * dx + dy * dy;
                         let dist = Math.sqrt(distSq);
-                        let f = (G * this.mass * body.mass) / distSq;
-                        fx += f * dx / dist;
-                        fy += f * dy / dist;
+                        
+                        // 衝突判定
+                        if (dist < this.radius + body.radius) {
+                            this.handleCollision(body);
+                        } else {
+                            let f = (G * this.mass * body.mass) / distSq;
+                            fx += f * dx / dist;
+                            fy += f * dy / dist;
+                        }
                     }
                 }
                 this.vx += fx / this.mass * dt;
@@ -142,19 +149,41 @@
                 }
             }
 
+            handleCollision(other) {
+                // 完全弾性衝突の処理
+                const totalMass = this.mass + other.mass;
+                const newVx1 = (this.vx * (this.mass - other.mass) + 2 * other.mass * other.vx) / totalMass;
+                const newVy1 = (this.vy * (this.mass - other.mass) + 2 * other.mass * other.vy) / totalMass;
+                const newVx2 = (other.vx * (other.mass - this.mass) + 2 * this.mass * this.vx) / totalMass;
+                const newVy2 = (other.vy * (other.mass - this.mass) + 2 * this.mass * this.vy) / totalMass;
+
+                this.vx = newVx1;
+                this.vy = newVy1;
+                other.vx = newVx2;
+                other.vy = newVy2;
+
+                // 衝突後に少し離す
+                const angle = Math.atan2(other.y - this.y, other.x - this.x);
+                const totalRadius = this.radius + other.radius;
+                this.x = other.x - Math.cos(angle) * totalRadius;
+                this.y = other.y - Math.sin(angle) * totalRadius;
+            }
+
             draw() {
-                let scaledX = this.x * SCALE;
-                let scaledY = this.y * SCALE;
+                const offsetX = canvas.width / 2;
+                const offsetY = canvas.height / 2;
+                let scaledX = this.x * SCALE + offsetX;
+                let scaledY = this.y * SCALE + offsetY;
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(scaledX, scaledY, Math.sqrt(this.mass) * 1e-13, 0, 2 * Math.PI);
+                ctx.arc(scaledX, scaledY, 5, 0, 2 * Math.PI); // 固定サイズ
                 ctx.fill();
 
                 if (showTrail) {
                     ctx.strokeStyle = this.color;
                     ctx.beginPath();
                     for (let point of this.trail) {
-                        ctx.lineTo(point.x, point.y);
+                        ctx.lineTo(point.x + offsetX, point.y + offsetY);
                     }
                     ctx.stroke();
                 }
@@ -254,7 +283,6 @@
             document.getElementById('dtValue').textContent = this.value;
         });
 
-        // 新しく追加した初期位置のスライダーのイベントリスナー
         ['body1X', 'body1Y', 'body2X', 'body2Y', 'body3X', 'body3Y'].forEach(id => {
             document.getElementById(id).addEventListener('input', function() {
                 document.getElementById(id + 'Value').textContent = this.value;
