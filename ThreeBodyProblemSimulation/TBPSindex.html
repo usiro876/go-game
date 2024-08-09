@@ -51,39 +51,39 @@
     <canvas id="simulationCanvas" width="800" height="600"></canvas>
     <div class="controls">
         <div class="control-group">
-            <label for="massSlider">質量: <span id="massValue">1e30</span> kg</label>
-            <input type="range" id="massSlider" min="1e29" max="1e30" step="1e29" value="1e30">
+            <label for="massSlider">質量: <span id="massValue">1e28</span> kg</label>
+            <input type="range" id="massSlider" min="1e27" max="1e29" step="1e27" value="1e28">
         </div>
         <div class="control-group">
-            <label for="velocitySlider">初速: <span id="velocityValue">30</span> km/s</label>
+            <label for="velocitySlider">初速: <span id="velocityValue">0</span> km/s</label>
             <input type="range" id="velocitySlider" min="0" max="100" step="1" value="30">
         </div>
         <div class="control-group">
-            <label for="dtSlider">時間刻み: <span id="dtValue">3600</span> 秒</label>
-            <input type="range" id="dtSlider" min="1800" max="7200" step="100" value="3600">
+            <label for="dtSlider">時間刻み: <span id="dtValue">7200</span> 秒</label>
+            <input type="range" id="dtSlider" min="1800" max="18000" step="100" value="7200">
         </div>
     </div>
     <div class="body-controls">
         <div class="control-group">
             <h3>天体1 (赤)</h3>
             <label for="body1X">X座標: <span id="body1XValue">0</span> AU</label>
-            <input type="range" id="body1X" min="-2" max="2" step="0.1" value="0">
+            <input type="range" id="body1X" min="0" max="10" step="0.1" value="3">
             <label for="body1Y">Y座標: <span id="body1YValue">0</span> AU</label>
-            <input type="range" id="body1Y" min="-2" max="2" step="0.1" value="0">
+            <input type="range" id="body1Y" min="0" max="10" step="0.1" value="7">
         </div>
         <div class="control-group">
             <h3>天体2 (青)</h3>
             <label for="body2X">X座標: <span id="body2XValue">1</span> AU</label>
-            <input type="range" id="body2X" min="-2" max="2" step="0.1" value="1">
+            <input type="range" id="body2X" min="0" max="10" step="0.1" value="2">
             <label for="body2Y">Y座標: <span id="body2YValue">0</span> AU</label>
-            <input type="range" id="body2Y" min="-2" max="2" step="0.1" value="0">
+            <input type="range" id="body2Y" min="0" max="10" step="0.1" value="4">
         </div>
         <div class="control-group">
             <h3>天体3 (緑)</h3>
             <label for="body3X">X座標: <span id="body3XValue">-0.5</span> AU</label>
-            <input type="range" id="body3X" min="-2" max="2" step="0.1" value="-0.5">
+            <input type="range" id="body3X" min="0" max="10" step="0.1" value="6">
             <label for="body3Y">Y座標: <span id="body3YValue">0.866</span> AU</label>
-            <input type="range" id="body3Y" min="-2" max="2" step="0.1" value="0.866">
+            <input type="range" id="body3Y" min="0" max="10" step="0.1" value="1">
         </div>
     </div>
     <div class="controls">
