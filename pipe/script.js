@@ -1,10 +1,11 @@
-        // Basic setup
-        const container = document.getElementById('container');
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        container.appendChild(renderer.domElement);
+document.addEventListener('DOMContentLoaded', () => {
+    // Basic setup
+    const container = document.getElementById('container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
 
         // Lighting setup
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -134,17 +135,17 @@
             
             renderer.render(scene, camera);
         }
+    // animate関数の呼び出し
+    animate();
 
-        animate();
+    // Handle window resize
+    window.addEventListener('resize', onWindowResize, false);
 
-        // Handle window resize
-        window.addEventListener('resize', onWindowResize, false);
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-    </script>
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+});
 </body>
 </html>
