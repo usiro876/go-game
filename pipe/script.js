@@ -26,7 +26,7 @@ function pickNextDirection() {
     return nextDirection;
 }
 
-// Function to update the position based on direction
+// Update the updatePosition function to add a particle at each step
 function updatePosition(direction) {
     switch(direction) {
         case 'x+': currentPosition.x += 1; break;
@@ -37,6 +37,7 @@ function updatePosition(direction) {
         case 'z-': currentPosition.z -= 1; break;
     }
     positions.push({...currentPosition});
+    addParticle(currentPosition); // Add this line
 }
 
 // Simulate a random walk
@@ -47,14 +48,24 @@ function randomWalk(steps) {
     }
 }
 
-// Draw the path
+// Update the drawPath function to modify line width
 function drawPath() {
-    const geometry = new THREE.BufferGeometry().setFromPoints(
-        positions.map(pos => new THREE.Vector3(pos.x, pos.y, pos.z))
-    );
-    const line = new THREE.Line(geometry, material);
-    scene.add(line);
+    const totalSteps = positions.length;
+    for (let i = 0; i < totalSteps - 1; i++) {
+        const geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(positions[i].x, positions[i].y, positions[i].z),
+            new THREE.Vector3(positions[i+1].x, positions[i+1].y, positions[i+1].z)
+        ]);
+
+        const material = new THREE.LineBasicMaterial({ 
+            color: getColor(i, totalSteps),
+            linewidth: 2 + (i / totalSteps) * 10 // Vary line width
+        });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+    }
 }
+
 
 // Initialize the random walk
 randomWalk(100);
@@ -101,19 +112,7 @@ function addParticle(position) {
     scene.add(particle);
 }
 
-// Update the updatePosition function to add a particle at each step
-function updatePosition(direction) {
-    switch(direction) {
-        case 'x+': currentPosition.x += 1; break;
-        case 'x-': currentPosition.x -= 1; break;
-        case 'y+': currentPosition.y += 1; break;
-        case 'y-': currentPosition.y -= 1; break;
-        case 'z+': currentPosition.z += 1; break;
-        case 'z-': currentPosition.z -= 1; break;
-    }
-    positions.push({...currentPosition});
-    addParticle(currentPosition); // Add this line
-}
+
 // Add stars to the background
 function addStars() {
     const starGeometry = new THREE.SphereGeometry(0.1, 24, 24);
@@ -156,21 +155,4 @@ function animate() {
     }
     
     renderer.render(scene, camera);
-}
-// Update the drawPath function to modify line width
-function drawPath() {
-    const totalSteps = positions.length;
-    for (let i = 0; i < totalSteps - 1; i++) {
-        const geometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(positions[i].x, positions[i].y, positions[i].z),
-            new THREE.Vector3(positions[i+1].x, positions[i+1].y, positions[i+1].z)
-        ]);
-
-        const material = new THREE.LineBasicMaterial({ 
-            color: getColor(i, totalSteps),
-            linewidth: 2 + (i / totalSteps) * 10 // Vary line width
-        });
-        const line = new THREE.Line(geometry, material);
-        scene.add(line);
-    }
 }
