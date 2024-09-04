@@ -1,72 +1,150 @@
-let scene, camera, renderer, container;
-let points = [];
-let line;
+        // Basic setup
+        const container = document.getElementById('container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
 
-function init() {
-    // シーンの作成
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf0f0f0);
+        // Lighting setup
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1).normalize();
+        scene.add(directionalLight);
 
-    // カメラの設定
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 50;
+        const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+        scene.add(ambientLight);
 
-    // レンダラーの設定
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    container = document.getElementById('container');
-    container.appendChild(renderer.domElement);
+        // Add stars to the background
+        function addStars() {
+            const starGeometry = new THREE.SphereGeometry(0.1, 24, 24);
+            const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const starGroup = new THREE.Group();
 
-    // 光源の追加
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(1, 1, 1);
-    scene.add(directionalLight);
+            for (let i = 0; i < 200; i++) {
+                const star = new THREE.Mesh(starGeometry, starMaterial);
 
-    // ランダムウォークの初期点
-    const geometry = new THREE.BufferGeometry();
-    const material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+                star.position.x = THREE.MathUtils.randFloatSpread(100);
+                star.position.y = THREE.MathUtils.randFloatSpread(100);
+                star.position.z = THREE.MathUtils.randFloatSpread(100);
 
-    points.push(new THREE.Vector3(0, 0, 0));
-    geometry.setFromPoints(points);
+                starGroup.add(star);
+            }
 
-    line = new THREE.Line(geometry, material);
-    scene.add(line);
-}
+            scene.add(starGroup);
+        }
 
-function animate() {
-    requestAnimationFrame(animate);
+        // Call the addStars function to populate the scene with stars
+        addStars();
 
-    // 新しい点を追加
-    const lastPoint = points[points.length - 1];
-    const newPoint = lastPoint.clone().add(new THREE.Vector3(
-        (Math.random() - 0.5) * 2,
-        (Math.random() - 0.5) * 2,
-        (Math.random() - 0.5) * 2
-    ));
-    points.push(newPoint);
+        // Random walk parameters
+        let positions = [];
+        let currentPosition = { x: 0, y: 0, z: 0 };
+        let directions = ['x+', 'x-', 'y+', 'y-', 'z+', 'z-'];
+        let lastDirection = '';
+        let cameraStep = 0;
+        const cameraSpeed = 0.1;  // Reduced camera speed for smoother movement
 
-    // ラインジオメトリを更新
-    line.geometry.setFromPoints(points);
+        // Add the starting point
+        positions.push(currentPosition);
 
-    // カメラを回転
-    camera.position.x = Math.sin(Date.now() * 0.001) * 50;
-    camera.position.z = Math.cos(Date.now() * 0.001) * 50;
-    camera.lookAt(scene.position);
+        // Function to pick the next direction randomly
+        function pickNextDirection() {
+            let availableDirections = directions.filter(dir => dir !== lastDirection);
+            let nextDirection = availableDirections[Math.floor(Math.random() * availableDirections.length)];
+            lastDirection = nextDirection;
+            return nextDirection;
+        }
 
-    renderer.render(scene, camera);
-}
+        // Function to update the position based on direction and add particle
+        function updatePosition(direction) {
+            switch(direction) {
+                case 'x+': currentPosition.x += 1; break;
+                case 'x-': currentPosition.x -= 1; break;
+                case 'y+': currentPosition.y += 1; break;
+                case 'y-': currentPosition.y -= 1; break;
+                case 'z+': currentPosition.z += 1; break;
+                case 'z-': currentPosition.z -= 1; break;
+            }
+            positions.push({...currentPosition});
+            addParticle(currentPosition);
+        }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
+        // Function to create gradient color based on step
+        function getColor(step, totalSteps) {
+            const hue = (step / totalSteps) * 360;
+            return new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+        }
 
-// 初期化とアニメーションの開始
-init();
-animate();
+        // Function to add a particle at the current position
+        function addParticle(position) {
+            const particleGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+            const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+            particle.position.set(position.x, position.y, position.z);
+            scene.add(particle);
+        }
 
-// リサイズイベントリスナーの追加
-window.addEventListener('resize', onWindowResize, false);
+        // Draw the path with gradient colors
+        function drawPath() {
+            const totalSteps = positions.length;
+            const pathGeometry = new THREE.BufferGeometry();
+            const pathMaterial = new THREE.LineBasicMaterial({ vertexColors: true });
+            
+            const vertices = [];
+            const colors = [];
+
+            for (let i = 0; i < totalSteps; i++) {
+                vertices.push(positions[i].x, positions[i].y, positions[i].z);
+                const color = getColor(i, totalSteps);
+                colors.push(color.r, color.g, color.b);
+            }
+
+            pathGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            pathGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            const path = new THREE.Line(pathGeometry, pathMaterial);
+            scene.add(path);
+        }
+
+        // Simulate a random walk
+        function randomWalk(steps) {
+            for (let i = 0; i < steps; i++) {
+                let nextDirection = pickNextDirection();
+                updatePosition(nextDirection);
+            }
+        }
+
+        // Initialize the random walk
+        randomWalk(100);
+        drawPath();
+
+        // Camera setup and animation loop
+        camera.position.z = 10;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move camera along the path
+            if (cameraStep < positions.length) {
+                const targetPosition = positions[Math.floor(cameraStep)];
+                camera.position.lerp(new THREE.Vector3(targetPosition.x, targetPosition.y, targetPosition.z + 10), 0.1);
+                camera.lookAt(targetPosition.x, targetPosition.y, targetPosition.z);
+                cameraStep += cameraSpeed;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
