@@ -12,4 +12,6 @@ body, html {
     justify-content: center;
     align-items: center;
 }
-
+canvas { 
+    display: block; 
+}
