@@ -6,6 +6,12 @@
     "description": "3D Random Walk along XYZ axes"
   },
   {
+    "id": "lifegame-lifegame",
+    "title": "ライフゲーム - 保護色",
+    "path": "lifegame/lifegame.html",
+    "description": "ライフゲーム - 保護色"
+  },
+  {
     "id": "ThreeBodyProblemSimulation-index",
     "title": "三体問題シミュレーション",
     "path": "ThreeBodyProblemSimulation/index.html",
