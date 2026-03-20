@@ -12,9 +12,9 @@
     "description": "3D Random Walk along XYZ axes"
   },
   {
-    "id": "lifegame-lifegame",
+    "id": "lifegame-index",
     "title": "ライフゲーム - 保護色",
-    "path": "lifegame/lifegame.html",
+    "path": "lifegame/index.html",
     "description": "ライフゲーム - 保護色"
   },
   {
