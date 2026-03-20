@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>reCAPTCHA シミュレーター</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+  background: #f0f4f8;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  color: #333;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+/* モード切替タブ */
+.mode-tabs {
+  display: flex;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #4a90d9;
+}
+.mode-tab {
+  padding: 10px 32px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #fff;
+  color: #4a90d9;
+  transition: background 0.2s, color 0.2s;
+  font-family: inherit;
+}
+.mode-tab.active { background: #4a90d9; color: #fff; }
+.mode-tab:hover:not(.active) { background: #e8f0fb; }
+
+/* カード共通 */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  padding: 24px;
+  width: 100%;
+  max-width: 520px;
+}
+
+/* ===== 作問モード ===== */
+#create-mode { display: block; }
+#answer-mode { display: none; }
+
+.section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.instruction-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-bottom: 20px;
+}
+.instruction-input:focus { border-color: #4a90d9; }
+
+/* 9枚グリッド（作問） */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: 20px;
+}
+.create-cell {
+  aspect-ratio: 1;
+  position: relative;
+  background: #eef2f7;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+.create-cell:hover { border-color: #aaa; }
+.create-cell.correct { border-color: #34a853; }
+.create-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.create-cell .upload-placeholder {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px; color: #aaa; font-size: 0.75rem;
+}
+.create-cell .upload-placeholder svg { opacity: 0.4; }
+.create-cell .cell-overlay {
+  position: absolute; inset: 0;
+  background: rgba(52, 168, 83, 0.38);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s;
+}
+.create-cell.correct .cell-overlay { opacity: 1; }
+.create-cell .cell-num {
+  position: absolute; top: 4px; left: 6px;
+  font-size: 0.72rem; font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.create-cell .remove-btn {
+  position: absolute; top: 3px; right: 3px;
+  width: 20px; height: 20px;
+  background: rgba(0,0,0,0.5); border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 10; font-size: 12px; color: #fff;
+}
+.create-cell:hover .remove-btn { display: flex; }
+
+.hint {
+  font-size: 0.78rem; color: #888; margin-bottom: 20px;
+  background: #f7f9fc; border-left: 3px solid #4a90d9;
+  padding: 8px 12px; border-radius: 0 6px 6px 0;
+}
+
+/* 問題リスト */
+.question-list-title {
+  font-size: 0.85rem; font-weight: 700; color: #666;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin: 24px 0 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.question-list {
+  display: flex; flex-direction: column;
+  gap: 8px; max-height: 240px; overflow-y: auto;
+}
+.question-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: #f7f9fc;
+  border-radius: 8px; cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.question-item:hover { background: #eef2fb; border-color: #4a90d9; }
+.question-item-thumb {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 2px; width: 48px; height: 48px;
+  border-radius: 4px; overflow: hidden; flex-shrink: 0;
+}
+.question-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.question-item-thumb .thumb-empty { background: #dde; }
+.question-item-info { flex: 1; min-width: 0; }
+.question-item-label {
+  font-size: 0.9rem; font-weight: 600; color: #333;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.question-item-meta { font-size: 0.75rem; color: #888; margin-top: 2px; }
+.question-item-del {
+  background: none; border: none; color: #ccc;
+  cursor: pointer; font-size: 1.1rem; padding: 4px;
+  border-radius: 4px; transition: color 0.15s;
+}
+.question-item-del:hover { color: #e53935; }
+
+/* ボタン系 */
+.btn {
+  padding: 10px 22px; border-radius: 8px;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  border: none; font-family: inherit;
+  transition: background 0.2s, opacity 0.2s;
+}
+.btn-primary { background: #4a90d9; color: #fff; }
+.btn-primary:hover { background: #3278c0; }
+.btn-primary:disabled { opacity: 0.5; cursor: default; }
+.btn-secondary { background: #f0f0f0; color: #555; }
+.btn-secondary:hover { background: #e0e0e0; }
+.btn-row { display: flex; gap: 10px; margin-top: 8px; }
+
+.empty-state {
+  text-align: center; padding: 32px 16px;
+  color: #aaa; font-size: 0.9rem;
+}
+
+/* ===== 解答モード ===== */
+.answer-question-select { margin-bottom: 20px; }
+.answer-question-select select {
+  width: 100%; padding: 10px 14px;
+  border: 1.5px solid #ccc; border-radius: 8px;
+  font-size: 0.95rem; font-family: inherit;
+  outline: none; background: #fff; cursor: pointer;
+}
+.answer-question-select select:focus { border-color: #4a90d9; }
+
+/* ========== reCAPTCHA ウィジェット ========== */
+.rc-widget {
+  width: 302px;
+  margin: 0 auto;
+  border: 1px solid #c1c1c1;
+  border-radius: 3px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.15);
+  background: #fff;
+  user-select: none;
+}
+
+/* ヘッダー（水色帯） */
+.rc-header {
+  background: #1a73e8;
+  padding: 12px 14px 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rc-header-text { flex: 1; }
+.rc-header-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+.rc-header-instruction {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
+}
+.rc-header-icons {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.rc-icon-btn {
+  width: 28px; height: 28px;
+  border: none; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s;
+  padding: 0;
+}
+.rc-icon-btn:hover { background: rgba(255,255,255,0.18); }
+.rc-icon-btn svg { display: block; }
+
+/* 画像グリッド */
+.rc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: #fff;
+  padding: 2px;
+}
+.rc-cell {
+  position: relative;
+  aspect-ratio: 1;
+  cursor: pointer;
+  overflow: hidden;
+  background: #e0e0e0;
+}
+.rc-cell img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  transition: filter 0.15s;
+  -webkit-user-drag: none;
+}
+.rc-cell:hover img { filter: brightness(0.9); }
+
+/* 選択オーバーレイ */
+.rc-cell-overlay {
+  position: absolute; inset: 0;
+  background: rgba(26, 115, 232, 0.35);
+  border: 3px solid #1a73e8;
+  opacity: 0;
+  transition: opacity 0.12s;
+  pointer-events: none;
+}
+.rc-cell.selected .rc-cell-overlay { opacity: 1; }
+
+/* チェックマークバッジ（右下） */
+.rc-cell-check {
+  position: absolute;
+  bottom: 6px; right: 6px;
+  width: 22px; height: 22px;
+  background: #1a73e8;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.12s, transform 0.12s;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+.rc-cell.selected .rc-cell-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 結果表示オーバーレイ */
+.rc-cell-result {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+  font-size: 2rem;
+}
+.rc-cell.show-result .rc-cell-result { opacity: 1; }
+
+/* 正解選択: 緑枠 */
+.rc-cell.result-tp { outline: 3px solid #34a853; outline-offset: -3px; }
+.rc-cell.result-tp .rc-cell-result { background: rgba(52,168,83,0.18); }
+/* 誤選択: 赤枠 */
+.rc-cell.result-fp { outline: 3px solid #d93025; outline-offset: -3px; }
+.rc-cell.result-fp .rc-cell-result { background: rgba(217,48,37,0.18); }
+/* 未選択の正解: オレンジ枠 */
+.rc-cell.result-fn { outline: 3px solid #f29900; outline-offset: -3px; }
+.rc-cell.result-fn .rc-cell-result { background: rgba(242,153,0,0.15); }
+
+/* フッター */
+.rc-footer {
+  background: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+  padding: 8px 10px 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rc-branding {
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+}
+.rc-logo {
+  width: 32px; height: 32px; flex-shrink: 0;
+}
+.rc-branding-text { line-height: 1.2; }
+.rc-branding-name {
+  font-size: 10px; font-weight: 700;
+  color: #555; letter-spacing: 0.3px;
+}
+.rc-branding-links {
+  display: flex; gap: 4px;
+}
+.rc-branding-links a {
+  font-size: 8px; color: #777;
+  text-decoration: none;
+}
+.rc-branding-links a:hover { text-decoration: underline; }
+.rc-branding-links span { font-size: 8px; color: #bbb; }
+
+.rc-verify-btn {
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  letter-spacing: 0.25px;
+  transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rc-verify-btn:hover { background: #1557b0; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.rc-verify-btn:disabled {
+  background: #dadce0; color: #80868b;
+  cursor: default; box-shadow: none;
+}
+
+/* 結果バナー */
+.result-banner {
+  display: none;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+.result-banner.pass {
+  background: #e6f4ea; color: #1e7e34;
+  border: 1.5px solid #34a853; display: block;
+}
+.result-banner.fail {
+  background: #fce8e8; color: #c5221f;
+  border: 1.5px solid #d93025; display: block;
+}
+.score-detail {
+  font-size: 0.78rem; color: inherit;
+  opacity: 0.75; margin-top: 4px; font-weight: 400;
+}
+
+/* もう一度ボタン */
+.retry-btn {
+  display: block; width: 302px; margin: 10px auto 0;
+  padding: 9px; background: #f1f3f4; color: #444;
+  border: 1px solid #dadce0; border-radius: 4px;
+  font-size: 13px; font-weight: 500; font-family: inherit;
+  cursor: pointer; transition: background 0.15s;
+  text-align: center;
+}
+.retry-btn:hover { background: #e8eaed; }
+</style>
+</head>
+<body>
+
+<h1>reCAPTCHA シミュレーター</h1>
+
+<div class="mode-tabs">
+  <button class="mode-tab active" id="tab-create" onclick="switchMode('create')">✏️ 作問モード</button>
+  <button class="mode-tab" id="tab-answer" onclick="switchMode('answer')">✅ 解答モード</button>
+</div>
+
+<!-- ===== 作問モード ===== -->
+<div class="card" id="create-mode">
+  <p class="section-title">指示文</p>
+  <input class="instruction-input" id="create-instruction" type="text"
+    placeholder="例: 信号機" maxlength="40">
+
+  <p class="section-title">画像 (9枚) ＋ 正解マーク</p>
+  <div class="hint">
+    各セルをクリックして画像をアップロード。<br>
+    画像をクリックで <strong style="color:#34a853">正解（緑枠）</strong> / 不正解を切り替え。右上×で削除。
+  </div>
+
+  <div class="image-grid" id="create-grid"></div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="saveQuestion()">💾 問題を保存</button>
+    <button class="btn btn-secondary" onclick="clearCreate()">🗑 クリア</button>
+  </div>
+
+  <div id="saved-section">
+    <div class="question-list-title">
+      <span>保存済み問題</span>
+      <span id="saved-count" style="font-size:0.8rem;color:#aaa;font-weight:400"></span>
+    </div>
+    <div class="question-list" id="question-list"></div>
+  </div>
+</div>
+
+<!-- ===== 解答モード ===== -->
+<div class="card" id="answer-mode">
+  <div class="answer-question-select">
+    <p class="section-title" style="margin-bottom:8px">問題を選択</p>
+    <select id="answer-select" onchange="loadAnswerQuestion()">
+      <option value="">-- 問題を選んでください --</option>
+    </select>
+  </div>
+
+  <div id="captcha-area">
+    <div class="empty-state">← 問題を選択してください</div>
+  </div>
+
+  <div class="result-banner" id="result-banner"></div>
+</div>
+
+<input type="file" id="file-input" accept="image/*" style="display:none">
+
+<script>
+const STORAGE_KEY = 'recaptcha_sim_questions';
+
+function loadQuestions() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveQuestions(qs) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(qs));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      alert('ストレージ容量が不足しています。\n不要な問題を削除してから再度お試しください。');
+    } else { throw e; }
+  }
+}
+
+// ===== 作問モード =====
+let createCells = Array(9).fill(null).map(() => ({ dataUrl: null, correct: false }));
+let editingIndex = null;
+
+function switchMode(mode) {
+  document.getElementById('create-mode').style.display = mode === 'create' ? 'block' : 'none';
+  document.getElementById('answer-mode').style.display  = mode === 'answer'  ? 'block' : 'none';
+  document.getElementById('tab-create').classList.toggle('active', mode === 'create');
+  document.getElementById('tab-answer').classList.toggle('active', mode === 'answer');
+  if (mode === 'answer') refreshAnswerSelect();
+}
+
+function buildCreateGrid() {
+  const grid = document.getElementById('create-grid');
+  grid.innerHTML = '';
+  createCells.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.className = 'create-cell' + (cell.correct ? ' correct' : '');
+
+    const num = document.createElement('div');
+    num.className = 'cell-num';
+    num.textContent = i + 1;
+    div.appendChild(num);
+
+    if (cell.dataUrl) {
+      const img = document.createElement('img');
+      img.src = cell.dataUrl;
+      div.appendChild(img);
+
+      const overlay = document.createElement('div');
+      overlay.className = 'cell-overlay';
+      overlay.innerHTML = `<svg width="34" height="34" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+      div.appendChild(overlay);
+
+      const rm = document.createElement('div');
+      rm.className = 'remove-btn';
+      rm.innerHTML = '×';
+      rm.addEventListener('click', e => {
+        e.stopPropagation();
+        createCells[i] = { dataUrl: null, correct: false };
+        buildCreateGrid();
+      });
+      div.appendChild(rm);
+
+      div.addEventListener('click', () => {
+        createCells[i].correct = !createCells[i].correct;
+        buildCreateGrid();
+      });
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'upload-placeholder';
+      ph.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="#aaa"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg><span>クリックして追加</span>`;
+      div.appendChild(ph);
+      div.addEventListener('click', () => {
+        const fi = document.getElementById('file-input');
+        fi._targetIndex = i;
+        fi.value = '';
+        fi.click();
+      });
+    }
+    grid.appendChild(div);
+  });
+}
+
+function compressImage(file, maxSize, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+        else       { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('file-input').addEventListener('change', async function() {
+  const file = this.files[0];
+  if (!file) return;
+  const idx = this._targetIndex;
+  const dataUrl = await compressImage(file, 200, 0.7);
+  createCells[idx].dataUrl = dataUrl;
+  createCells[idx].correct = false;
+  buildCreateGrid();
+});
+
+function saveQuestion() {
+  const instruction = document.getElementById('create-instruction').value.trim();
+  if (!instruction) { alert('指示文を入力してください。'); return; }
+  const filled = createCells.filter(c => c.dataUrl).length;
+  if (filled < 9) { alert(`画像が${filled}枚しかありません。9枚すべてアップロードしてください。`); return; }
+  const correctCount = createCells.filter(c => c.correct).length;
+  if (correctCount === 0) { alert('正解となる画像を1枚以上クリックして選んでください。'); return; }
+
+  const qs = loadQuestions();
+  const q = {
+    id: editingIndex !== null ? qs[editingIndex].id : Date.now(),
+    instruction,
+    cells: createCells.map(c => ({ dataUrl: c.dataUrl, correct: c.correct })),
+    createdAt: new Date().toLocaleString('ja-JP')
+  };
+  if (editingIndex !== null) { qs[editingIndex] = q; editingIndex = null; }
+  else { qs.push(q); }
+  saveQuestions(qs);
+  clearCreate();
+  renderQuestionList();
+  alert('問題を保存しました！');
+}
+
+function clearCreate() {
+  createCells = Array(9).fill(null).map(() => ({ dataUrl: null, correct: false }));
+  document.getElementById('create-instruction').value = '';
+  editingIndex = null;
+  buildCreateGrid();
+}
+
+function renderQuestionList() {
+  const qs = loadQuestions();
+  document.getElementById('saved-count').textContent = `${qs.length}件`;
+  const list = document.getElementById('question-list');
+  if (qs.length === 0) {
+    list.innerHTML = '<div class="empty-state">まだ問題がありません</div>';
+    return;
+  }
+  list.innerHTML = '';
+  qs.forEach((q, idx) => {
+    const item = document.createElement('div');
+    item.className = 'question-item';
+
+    const thumb = document.createElement('div');
+    thumb.className = 'question-item-thumb';
+    q.cells.forEach(c => {
+      if (c.dataUrl) {
+        const img = document.createElement('img'); img.src = c.dataUrl; thumb.appendChild(img);
+      } else {
+        const e = document.createElement('div'); e.className = 'thumb-empty'; thumb.appendChild(e);
+      }
+    });
+    item.appendChild(thumb);
+
+    const info = document.createElement('div');
+    info.className = 'question-item-info';
+    info.innerHTML = `<div class="question-item-label">${escapeHtml(q.instruction)}</div>
+      <div class="question-item-meta">正解: ${q.cells.filter(c=>c.correct).length}枚 ／ ${q.createdAt}</div>`;
+    item.appendChild(info);
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-secondary';
+    editBtn.style.cssText = 'padding:4px 10px;font-size:0.78rem;margin-right:4px';
+    editBtn.textContent = '編集';
+    editBtn.addEventListener('click', e => { e.stopPropagation(); loadForEdit(idx); });
+    item.appendChild(editBtn);
+
+    const del = document.createElement('button');
+    del.className = 'question-item-del';
+    del.textContent = '✕'; del.title = '削除';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      if (confirm('この問題を削除しますか？')) {
+        const qs2 = loadQuestions(); qs2.splice(idx, 1);
+        saveQuestions(qs2); renderQuestionList(); refreshAnswerSelect();
+      }
+    });
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
+function loadForEdit(idx) {
+  const q = loadQuestions()[idx];
+  document.getElementById('create-instruction').value = q.instruction;
+  createCells = q.cells.map(c => ({ dataUrl: c.dataUrl, correct: c.correct }));
+  editingIndex = idx;
+  buildCreateGrid();
+  switchMode('create');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ===== 解答モード =====
+function refreshAnswerSelect() {
+  const qs = loadQuestions();
+  const sel = document.getElementById('answer-select');
+  sel.innerHTML = '<option value="">-- 問題を選んでください --</option>';
+  qs.forEach((q, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `${i+1}. ${q.instruction}`;
+    sel.appendChild(opt);
+  });
+  document.getElementById('captcha-area').innerHTML = '<div class="empty-state">← 問題を選択してください</div>';
+  document.getElementById('result-banner').className = 'result-banner';
+}
+
+let answerSelected = new Set();
+let answerQuestion = null;
+let resultShown = false;
+
+function loadAnswerQuestion() {
+  const sel = document.getElementById('answer-select');
+  const idx = parseInt(sel.value);
+  if (isNaN(idx)) {
+    document.getElementById('captcha-area').innerHTML = '<div class="empty-state">← 問題を選択してください</div>';
+    document.getElementById('result-banner').className = 'result-banner';
+    return;
+  }
+  answerQuestion = loadQuestions()[idx];
+  answerSelected = new Set();
+  resultShown = false;
+  renderCaptcha();
+  document.getElementById('result-banner').className = 'result-banner';
+}
+
+function renderCaptcha() {
+  const q = answerQuestion;
+  const area = document.getElementById('captcha-area');
+  area.innerHTML = '';
+
+  // ウィジェット本体
+  const widget = document.createElement('div');
+  widget.className = 'rc-widget';
+
+  // ─── ヘッダー ───
+  const header = document.createElement('div');
+  header.className = 'rc-header';
+
+  const headerText = document.createElement('div');
+  headerText.className = 'rc-header-text';
+  headerText.innerHTML = `
+    <div class="rc-header-label">次の画像をすべて選択してください</div>
+    <div class="rc-header-instruction">${escapeHtml(q.instruction)}</div>`;
+  header.appendChild(headerText);
+
+  // アイコンボタン群
+  const icons = document.createElement('div');
+  icons.className = 'rc-header-icons';
+  // リロードアイコン
+  const reloadBtn = document.createElement('button');
+  reloadBtn.className = 'rc-icon-btn';
+  reloadBtn.title = '別の問題を表示';
+  reloadBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.85)">
+    <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+  </svg>`;
+  reloadBtn.addEventListener('click', () => {
+    if (!resultShown) { answerSelected = new Set(); renderCaptcha(); }
+  });
+  icons.appendChild(reloadBtn);
+  // ヘルプアイコン
+  const helpBtn = document.createElement('button');
+  helpBtn.className = 'rc-icon-btn';
+  helpBtn.title = 'ヘルプ';
+  helpBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.85)">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+  </svg>`;
+  icons.appendChild(helpBtn);
+
+  header.appendChild(icons);
+  widget.appendChild(header);
+
+  // ─── グリッド ───
+  const grid = document.createElement('div');
+  grid.className = 'rc-grid';
+
+  q.cells.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.className = 'rc-cell';
+    div.id = `rc-cell-${i}`;
+
+    const img = document.createElement('img');
+    img.src = cell.dataUrl;
+    img.draggable = false;
+    img.alt = '';
+    div.appendChild(img);
+
+    // 選択オーバーレイ（半透明青 + 青枠）
+    const overlay = document.createElement('div');
+    overlay.className = 'rc-cell-overlay';
+    div.appendChild(overlay);
+
+    // チェックバッジ（右下）
+    const check = document.createElement('div');
+    check.className = 'rc-cell-check';
+    check.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="white">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+    </svg>`;
+    div.appendChild(check);
+
+    // 結果オーバーレイ
+    const result = document.createElement('div');
+    result.className = 'rc-cell-result';
+    div.appendChild(result);
+
+    div.addEventListener('click', () => {
+      if (resultShown) return;
+      if (answerSelected.has(i)) {
+        answerSelected.delete(i);
+        div.classList.remove('selected');
+      } else {
+        answerSelected.add(i);
+        div.classList.add('selected');
+      }
+      updateVerifyBtn();
+    });
+
+    grid.appendChild(div);
+  });
+  widget.appendChild(grid);
+
+  // ─── フッター ───
+  const footer = document.createElement('div');
+  footer.className = 'rc-footer';
+
+  // ブランディング（左）
+  footer.innerHTML = `
+    <div class="rc-branding">
+      <svg class="rc-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32 4 L54 16 L54 40 Q54 54 32 60 Q10 54 10 40 L10 16 Z" fill="#249d8c"/>
+        <path d="M32 10 L50 20 L50 40 Q50 51 32 56 Q14 51 14 40 L14 20 Z" fill="#1a8070"/>
+        <path d="M24 37 L21 34 L19 36 L24 41 L45 24 L43 22 Z" fill="white"/>
+      </svg>
+      <div class="rc-branding-text">
+        <div class="rc-branding-name">reCAPTCHA</div>
+        <div class="rc-branding-links">
+          <a href="#">プライバシー</a>
+          <span>-</span>
+          <a href="#">利用規約</a>
+        </div>
+      </div>
+    </div>`;
+
+  const verifyBtn = document.createElement('button');
+  verifyBtn.className = 'rc-verify-btn';
+  verifyBtn.id = 'rc-verify-btn';
+  verifyBtn.textContent = '確認';
+  verifyBtn.disabled = true;
+  verifyBtn.addEventListener('click', () => checkAnswer(verifyBtn));
+  footer.appendChild(verifyBtn);
+
+  widget.appendChild(footer);
+  area.appendChild(widget);
+}
+
+function updateVerifyBtn() {
+  const btn = document.getElementById('rc-verify-btn');
+  if (btn) btn.disabled = answerSelected.size === 0;
+}
+
+function checkAnswer(btn) {
+  if (resultShown) return;
+  resultShown = true;
+  btn.disabled = true;
+
+  const q = answerQuestion;
+  let tp = 0, fp = 0, fn = 0;
+
+  q.cells.forEach((cell, i) => {
+    const div = document.getElementById(`rc-cell-${i}`);
+    const isSelected = answerSelected.has(i);
+    const isCorrect = cell.correct;
+    const resOv = div.querySelector('.rc-cell-result');
+
+    div.classList.add('show-result');
+    if (isSelected && isCorrect) {
+      tp++;
+      div.classList.add('result-tp');
+      resOv.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(52,168,83,0.85)"/><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="white"/></svg>`;
+    } else if (isSelected && !isCorrect) {
+      fp++;
+      div.classList.add('result-fp');
+      resOv.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(217,48,37,0.85)"/><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="white"/></svg>`;
+    } else if (!isSelected && isCorrect) {
+      fn++;
+      div.classList.add('result-fn');
+      resOv.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(242,153,0,0.85)"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="white"/></svg>`;
+    }
+  });
+
+  const correctCount = q.cells.filter(c => c.correct).length;
+  const pass = fp === 0 && fn === 0;
+  const banner = document.getElementById('result-banner');
+
+  if (pass) {
+    banner.className = 'result-banner pass';
+    banner.innerHTML = `✅ 正解！すべて正しく選択できました。<div class="score-detail">正解: ${tp}/${correctCount}枚 ／ 誤選択: ${fp}枚 ／ 選択漏れ: ${fn}枚</div>`;
+  } else {
+    banner.className = 'result-banner fail';
+    const msgs = [];
+    if (fp > 0) msgs.push(`誤選択 ${fp}枚`);
+    if (fn > 0) msgs.push(`選択漏れ ${fn}枚`);
+    banner.innerHTML = `❌ 不正解。${msgs.join('、')}<div class="score-detail">正解: ${tp}/${correctCount}枚 ／ ${msgs.join(' ／ ')}</div>`;
+  }
+
+  // もう一度ボタン
+  const retry = document.createElement('button');
+  retry.className = 'retry-btn';
+  retry.textContent = '↩ もう一度挑戦する';
+  retry.onclick = () => {
+    answerSelected = new Set();
+    resultShown = false;
+    renderCaptcha();
+    banner.className = 'result-banner';
+  };
+  document.getElementById('captcha-area').appendChild(retry);
+}
+
+// ===== 初期化 =====
+buildCreateGrid();
+renderQuestionList();
+</script>
+</body>
+</html>
