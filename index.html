@@ -80,7 +80,7 @@
     <script>
         async function loadMenu() {
             try {
-                const response = await fetch('pages.json');
+                const response = await fetch('pages.json', { cache: 'no-cache' });
                 if (!response.ok) throw new Error('HTTP error: ' + response.status);
                 const pages = await response.json();
                 const menu = document.getElementById('menu');
