@@ -6,12 +6,6 @@
     "description": "円形衝突判定ボールアニメーション"
   },
   {
-    "id": "pipe-index",
-    "title": "Random Walk Visualization",
-    "path": "pipe/index.html",
-    "description": "Random Walk Visualization"
-  },
-  {
     "id": "pipe2-script",
     "title": "3D Random Walk along XYZ axes",
     "path": "pipe2/script.html",
@@ -22,5 +16,11 @@
     "title": "三体問題シミュレーション",
     "path": "ThreeBodyProblemSimulation/TBPSindex.html",
     "description": "三体問題シミュレーション"
+  },
+  {
+    "id": "pipe-index",
+    "title": "Random Walk Visualization",
+    "path": "pipe/index.html",
+    "description": "Random Walk Visualization"
   }
 ]
