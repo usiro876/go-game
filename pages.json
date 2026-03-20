@@ -1,21 +1,21 @@
 [
   {
-    "id": "refrectball",
-    "title": "円形衝突判定ボールアニメーション",
-    "path": "refrectball.html",
-    "description": "円形衝突判定ボールアニメーション"
-  },
-  {
-    "id": "pipe2-script",
+    "id": "pipe2-index",
     "title": "3D Random Walk along XYZ axes",
-    "path": "pipe2/script.html",
+    "path": "pipe2/index.html",
     "description": "3D Random Walk along XYZ axes"
   },
   {
-    "id": "ThreeBodyProblemSimulation-TBPSindex",
+    "id": "ThreeBodyProblemSimulation-index",
     "title": "三体問題シミュレーション",
-    "path": "ThreeBodyProblemSimulation/TBPSindex.html",
+    "path": "ThreeBodyProblemSimulation/index.html",
     "description": "三体問題シミュレーション"
+  },
+  {
+    "id": "refrectball-index",
+    "title": "円形衝突判定ボールアニメーション",
+    "path": "refrectball/index.html",
+    "description": "円形衝突判定ボールアニメーション"
   },
   {
     "id": "pipe-index",
