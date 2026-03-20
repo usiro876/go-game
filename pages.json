@@ -1,5 +1,11 @@
 [
   {
+    "id": "recaptcha-simulator-index",
+    "title": "reCAPTCHA シミュレーター",
+    "path": "recaptcha-simulator/index.html",
+    "description": "reCAPTCHA シミュレーター"
+  },
+  {
     "id": "pipe2-index",
     "title": "3D Random Walk along XYZ axes",
     "path": "pipe2/index.html",
