@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ライフゲーム - 保護色</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      user-select: none;
+    }
+    h1 {
+      color: #666;
+      font-size: 14px;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    canvas {
+      border: 1px solid #333;
+      cursor: crosshair;
+      display: block;
+    }
+    .stats {
+      color: #555;
+      font-size: 11px;
+      margin-top: 6px;
+      display: flex;
+      gap: 20px;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    button {
+      background: #222;
+      color: #888;
+      border: 1px solid #444;
+      padding: 5px 14px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      transition: background 0.1s;
+    }
+    button:hover { background: #333; color: #aaa; }
+    button.active { background: #1a1a00; color: #aa0; border-color: #660; }
+    .hint {
+      color: #444;
+      font-size: 10px;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>LIFE GAME — 保護色モード</h1>
+  <canvas id="canvas"></canvas>
+  <div class="stats">
+    <span>世代: <span id="gen">0</span></span>
+    <span>個体数: <span id="pop">0</span></span>
+    <span>速度: <span id="spd">中</span></span>
+  </div>
+  <div class="controls">
+    <button id="btnPause">一時停止</button>
+    <button id="btnReset">リセット</button>
+    <button id="btnReveal">🔍 セル表示 (長押し)</button>
+    <button id="btnSpeed">速度切替</button>
+  </div>
+  <div class="hint">クリックでセルを追加 / 長押しでセルの位置を一時表示</div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const CELL = 10;
+    const COLS = 90;
+    const ROWS = 65;
+    const W = COLS * CELL;
+    const H = ROWS * CELL;
+    canvas.width = W;
+    canvas.height = H;
+
+    let grid = make2D(0);
+    let bgGrid = make2D(0);
+    let paused = false;
+    let reveal = false;
+    let generation = 0;
+    let frameCount = 0;
+    const SPEEDS = [{ label: '遅', frames: 16 }, { label: '中', frames: 8 }, { label: '速', frames: 3 }];
+    let speedIdx = 1;
+
+    function make2D(val) {
+      return Array.from({ length: ROWS }, () => new Array(COLS).fill(val));
+    }
+
+    function randomizeBg() {
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+          bgGrid[r][c] = Math.random() < 0.5 ? 1 : 0; // 1=白, 0=黒
+    }
+
+    function randomize() {
+      grid = make2D(0);
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+          grid[r][c] = Math.random() < 0.28 ? 1 : 0;
+      generation = 0;
+    }
+
+    function nextGen() {
+      const next = make2D(0);
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          let n = 0;
+          for (let dr = -1; dr <= 1; dr++)
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              n += grid[(r + dr + ROWS) % ROWS][(c + dc + COLS) % COLS];
+            }
+          if (grid[r][c]) {
+            next[r][c] = (n === 2 || n === 3) ? 1 : 0;
+          } else {
+            next[r][c] = n === 3 ? 1 : 0;
+          }
+        }
+      }
+      grid = next;
+      generation++;
+    }
+
+    function draw() {
+      let pop = 0;
+      // セルサイズ分のバッファに一括描画
+      const imgData = ctx.createImageData(W, H);
+      const d = imgData.data;
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const alive = grid[r][c];
+          if (alive) pop++;
+
+          let bright; // 0=黒, 255=白
+          if (reveal && alive) {
+            // 表示モード: 生存セルを薄い赤で強調
+            // セル全体を描画
+            for (let py = r * CELL; py < (r + 1) * CELL; py++) {
+              for (let px = c * CELL; px < (c + 1) * CELL; px++) {
+                const i = (py * W + px) * 4;
+                d[i]   = 180; // R
+                d[i+1] = 30;  // G
+                d[i+2] = 30;  // B
+                d[i+3] = 255;
+              }
+            }
+            continue;
+          }
+
+          if (alive) {
+            bright = 0; // 生存セル = 黒 (保護色!)
+          } else {
+            bright = bgGrid[r][c] ? 255 : 0; // 死セルは背景の白黒
+          }
+
+          for (let py = r * CELL; py < (r + 1) * CELL; py++) {
+            for (let px = c * CELL; px < (c + 1) * CELL; px++) {
+              const i = (py * W + px) * 4;
+              d[i]   = bright;
+              d[i+1] = bright;
+              d[i+2] = bright;
+              d[i+3] = 255;
+            }
+          }
+        }
+      }
+
+      ctx.putImageData(imgData, 0, 0);
+
+      // グリッド線 (極薄)
+      if (!reveal) {
+        ctx.strokeStyle = 'rgba(128,128,128,0.06)';
+        ctx.lineWidth = 0.5;
+        for (let c = 0; c <= COLS; c++) {
+          ctx.beginPath();
+          ctx.moveTo(c * CELL, 0);
+          ctx.lineTo(c * CELL, H);
+          ctx.stroke();
+        }
+        for (let r = 0; r <= ROWS; r++) {
+          ctx.beginPath();
+          ctx.moveTo(0, r * CELL);
+          ctx.lineTo(W, r * CELL);
+          ctx.stroke();
+        }
+      }
+
+      document.getElementById('gen').textContent = generation;
+      document.getElementById('pop').textContent = pop;
+    }
+
+    function loop() {
+      frameCount++;
+      if (!paused && frameCount >= SPEEDS[speedIdx].frames) {
+        nextGen();
+        frameCount = 0;
+      }
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // ---- コントロール ----
+    document.getElementById('btnPause').addEventListener('click', function () {
+      paused = !paused;
+      this.textContent = paused ? '再　開' : '一時停止';
+      this.classList.toggle('active', paused);
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      randomize();
+    });
+
+    const revealBtn = document.getElementById('btnReveal');
+    const startReveal = () => reveal = true;
+    const stopReveal  = () => reveal = false;
+    revealBtn.addEventListener('mousedown', startReveal);
+    revealBtn.addEventListener('mouseup',   stopReveal);
+    revealBtn.addEventListener('mouseleave', stopReveal);
+    revealBtn.addEventListener('touchstart', startReveal, { passive: true });
+    revealBtn.addEventListener('touchend',   stopReveal);
+
+    document.getElementById('btnSpeed').addEventListener('click', function () {
+      speedIdx = (speedIdx + 1) % SPEEDS.length;
+      document.getElementById('spd').textContent = SPEEDS[speedIdx].label;
+    });
+
+    // キャンバスクリックでセル追加
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const scaleY = H / rect.height;
+      const c = Math.floor((e.clientX - rect.left) * scaleX / CELL);
+      const r = Math.floor((e.clientY - rect.top)  * scaleY / CELL);
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+        grid[r][c] = 1 - grid[r][c];
+      }
+    });
+
+    // キーボードショートカット
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        paused = !paused;
+        document.getElementById('btnPause').textContent = paused ? '再　開' : '一時停止';
+      }
+      if (e.code === 'KeyR') randomize();
+      if (e.key === 'Shift') reveal = true;
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift') reveal = false;
+    });
+
+    randomizeBg();
+    randomize();
+    loop();
+  </script>
+</body>
+</html>
